@@ -1,15 +1,25 @@
-using JBID.Client.Pages;
-using JBID.Server.Components;
-using JBID.Server.Components.Account;
-using JBID.Server.Data;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+// Copyright (c) 2026 Robert Garner
+// SPDX-License-Identifier: MIT
 
 namespace JBID
 {
+    using JBID.Client.Pages;
+    using JBID.Server.Components;
+    using JBID.Server.Components.Account;
+    using JBID.Server.Data;
+    using Microsoft.AspNetCore.Components.Authorization;
+    using Microsoft.AspNetCore.Identity;
+    using Microsoft.EntityFrameworkCore;
+
+    /// <summary>
+    /// Configures and runs the JBID web server.
+    /// </summary>
     public class Program
     {
+        /// <summary>
+        /// Starts the web server with authentication and interactive components.
+        /// </summary>
+        /// <param name="args">The command-line arguments.</param>
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +68,7 @@ namespace JBID
             else
             {
                 app.UseExceptionHandler("/Error");
+
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
