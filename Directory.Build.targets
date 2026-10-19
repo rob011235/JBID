@@ -1,0 +1,17 @@
+<Project>
+  <!-- .NET 10's WebAssembly tasks can run in the current .NET MSBuild process.
+       Avoid a separate task host, which fails to connect in some environments.
+       Keep Visual Studio's .NET Framework task hosting unchanged. -->
+  <UsingTask TaskName="Microsoft.NET.Sdk.WebAssembly.ComputeWasmBuildAssets"
+             AssemblyFile="$(PkgMicrosoft_NET_Sdk_WebAssembly_Pack)\tools\net10.0\Microsoft.NET.Sdk.WebAssembly.Pack.Tasks.dll"
+             Override="true" Condition="'$(MSBuildRuntimeType)' == 'Core' and '$(PkgMicrosoft_NET_Sdk_WebAssembly_Pack)' != ''" />
+  <UsingTask TaskName="Microsoft.NET.Sdk.WebAssembly.ComputeWasmPublishAssets"
+             AssemblyFile="$(PkgMicrosoft_NET_Sdk_WebAssembly_Pack)\tools\net10.0\Microsoft.NET.Sdk.WebAssembly.Pack.Tasks.dll"
+             Override="true" Condition="'$(MSBuildRuntimeType)' == 'Core' and '$(PkgMicrosoft_NET_Sdk_WebAssembly_Pack)' != ''" />
+  <UsingTask TaskName="Microsoft.NET.Sdk.WebAssembly.GenerateWasmBootJson"
+             AssemblyFile="$(PkgMicrosoft_NET_Sdk_WebAssembly_Pack)\tools\net10.0\Microsoft.NET.Sdk.WebAssembly.Pack.Tasks.dll"
+             Override="true" Condition="'$(MSBuildRuntimeType)' == 'Core' and '$(PkgMicrosoft_NET_Sdk_WebAssembly_Pack)' != ''" />
+  <UsingTask TaskName="Microsoft.NET.Sdk.WebAssembly.ConvertDllsToWebCil"
+             AssemblyFile="$(PkgMicrosoft_NET_Sdk_WebAssembly_Pack)\tools\net10.0\Microsoft.NET.Sdk.WebAssembly.Pack.Tasks.dll"
+             Override="true" Condition="'$(MSBuildRuntimeType)' == 'Core' and '$(PkgMicrosoft_NET_Sdk_WebAssembly_Pack)' != ''" />
+</Project>

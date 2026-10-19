@@ -1,21 +1,33 @@
-using JBID.Server.Components.Account.Pages;
-using JBID.Server.Components.Account.Pages.Manage;
-using JBID.Server.Data;
-using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Primitives;
-using System.Security.Claims;
-using System.Text.Json;
+// Copyright (c) 2026 Robert Garner
+// SPDX-License-Identifier: MIT
 
 namespace Microsoft.AspNetCore.Routing
 {
+    using System.Security.Claims;
+    using System.Text.Json;
+    using JBID.Server.Components.Account.Pages;
+    using JBID.Server.Components.Account.Pages.Manage;
+    using JBID.Server.Data;
+    using Microsoft.AspNetCore.Antiforgery;
+    using Microsoft.AspNetCore.Authentication;
+    using Microsoft.AspNetCore.Components.Authorization;
+    using Microsoft.AspNetCore.Http.Extensions;
+    using Microsoft.AspNetCore.Identity;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.Extensions.Primitives;
+
+    /// <summary>
+    /// Maps the HTTP endpoints used by the Identity account components.
+    /// </summary>
     internal static class IdentityComponentsEndpointRouteBuilderExtensions
     {
         // These endpoints are required by the Identity Razor components defined in the /Components/Account/Pages directory of this project.
+
+        /// <summary>
+        /// Maps account login, logout, passkey, and personal data endpoints.
+        /// </summary>
+        /// <param name="endpoints">The route builder receiving the account endpoints.</param>
+        /// <returns>The account route group for further configuration.</returns>
         public static IEndpointConventionBuilder MapAdditionalIdentityEndpoints(this IEndpointRouteBuilder endpoints)
         {
             ArgumentNullException.ThrowIfNull(endpoints);
@@ -28,9 +40,11 @@ namespace Microsoft.AspNetCore.Routing
                 [FromForm] string provider,
                 [FromForm] string returnUrl) =>
             {
-                IEnumerable<KeyValuePair<string, StringValues>> query = [
-                    new("ReturnUrl", returnUrl),
-                    new("Action", ExternalLogin.LoginCallbackAction)];
+                IEnumerable<KeyValuePair<string, StringValues>> query = new KeyValuePair<string, StringValues>[]
+                {
+                    new KeyValuePair<string, StringValues>("ReturnUrl", returnUrl),
+                    new KeyValuePair<string, StringValues>("Action", ExternalLogin.LoginCallbackAction),
+                };
 
                 var redirectUrl = UriHelper.BuildRelative(
                     context.Request.PathBase,
@@ -38,7 +52,7 @@ namespace Microsoft.AspNetCore.Routing
                     QueryString.Create(query));
 
                 var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
-                return TypedResults.Challenge(properties, [provider]);
+                return TypedResults.Challenge(properties, new[] { provider });
             });
 
             accountGroup.MapPost("/Logout", async (
@@ -66,11 +80,11 @@ namespace Microsoft.AspNetCore.Routing
 
                 var userId = await userManager.GetUserIdAsync(user);
                 var userName = await userManager.GetUserNameAsync(user) ?? "User";
-                var optionsJson = await signInManager.MakePasskeyCreationOptionsAsync(new()
+                var optionsJson = await signInManager.MakePasskeyCreationOptionsAsync(new Microsoft.AspNetCore.Identity.PasskeyUserEntity()
                 {
                     Id = userId,
                     Name = userName,
-                    DisplayName = userName
+                    DisplayName = userName,
                 });
                 return TypedResults.Content(optionsJson, contentType: "application/json");
             });
@@ -105,7 +119,7 @@ namespace Microsoft.AspNetCore.Routing
                     QueryString.Create("Action", ExternalLogins.LinkLoginCallbackAction));
 
                 var properties = signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl, signInManager.UserManager.GetUserId(context.User));
-                return TypedResults.Challenge(properties, [provider]);
+                return TypedResults.Challenge(properties, new[] { provider });
             });
 
             var loggerFactory = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>();
@@ -140,7 +154,7 @@ namespace Microsoft.AspNetCore.Routing
                     personalData.Add($"{l.LoginProvider} external login provider key", l.ProviderKey);
                 }
 
-                personalData.Add("Authenticator Key", (await userManager.GetAuthenticatorKeyAsync(user))!);
+                personalData.Add("Authenticator Key", (await userManager.GetAuthenticatorKeyAsync(user)) !);
                 var fileBytes = JsonSerializer.SerializeToUtf8Bytes(personalData);
 
                 context.Response.Headers.TryAdd("Content-Disposition", "attachment; filename=PersonalData.json");
