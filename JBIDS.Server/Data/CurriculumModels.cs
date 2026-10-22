@@ -87,6 +87,14 @@ public sealed class JobAnnouncement
     /// <summary>Gets or sets the saved content.</summary>
     [Required]
     public string Text { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the query that discovered this source.</summary>
+    [MaxLength(400)]
+    public string? DiscoveryQuery { get; set; }
+
+    /// <summary>Gets or sets the user-described occupation and search filters.</summary>
+    [MaxLength(500)]
+    public string? DiscoveryDescription { get; set; }
 }
 
 /// <summary>A reviewable training objective.</summary>

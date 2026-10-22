@@ -1,0 +1,135 @@
+@page "/admin/job-websites"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "SiteAdmin")]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@using JBIDS.Server.Data
+@using JBIDS.Server.Services
+@inject JobSearchWebsiteService Websites
+@inject ILogger<JobWebsites> Logger
+
+<PageTitle>Job search websites | JBIDS</PageTitle>
+<p class="eyebrow">Site administration</p>
+<h1>Job search websites</h1>
+<p>Job searches use the enabled websites below. Changes apply to future searches. Previously collected announcements stay in their projects.</p>
+@if (error is not null) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (notice is not null) { <div class="alert alert-success" role="status">@notice</div> }
+@if (sites is null) { <p>Loading websites…</p> }
+else
+{
+    @if (!sites.Any(w => w.IsEnabled)) { <p class="alert alert-warning">No websites are enabled. Job searching is paused until you enable one.</p> }
+    <fieldset disabled="@busy">
+    <button class="btn btn-primary mb-3" @onclick="New">Add website</button>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <caption>Site-wide job search sources</caption>
+            <thead><tr><th scope="col">Website</th><th scope="col">Domain</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+            <tbody>
+            @foreach (var site in sites)
+            {
+                <tr><td>@site.Name</td><td>@site.Domain</td><td>@(site.IsEnabled ? "Enabled" : "Disabled")</td><td>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Edit(site)">Edit</button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1" @onclick="() => Toggle(site)">@(site.IsEnabled ? "Disable" : "Enable")</button>
+                    <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => Delete(site.Id)">Delete</button>
+                </td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    </fieldset>
+}
+
+<dialog class="website-editor" @ref="editor" aria-labelledby="website-editor-title" data-busy="@(busy ? "true" : "false")">
+    <div class="editor-heading">
+        <h2 id="website-editor-title">@(draft.Id == 0 ? "Add a website" : "Edit website")</h2>
+        <button type="button" class="btn-close" aria-label="Close website editor" disabled="@busy" @onclick="Cancel" />
+    </div>
+    @if (editorError is not null) { <div class="alert alert-danger" role="alert">@editorError</div> }
+    <EditForm Model="draft" OnValidSubmit="Save" FormName="job-website" @key="draft">
+        <DataAnnotationsValidator /><ValidationSummary />
+        <fieldset disabled="@busy">
+            <label for="website-name">Website name</label><InputText id="website-name" class="form-control mb-3" maxlength="100" @bind-Value="draft.Name" autofocus />
+            <label for="website-domain">Domain</label><InputText id="website-domain" class="form-control mb-3" maxlength="253" @bind-Value="draft.Domain" placeholder="indeed.com" />
+            <label class="mb-3"><InputCheckbox @bind-Value="draft.IsEnabled" /> Include in job searches</label>
+            <div class="editor-actions"><button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button><button class="btn btn-primary">@(busy ? "Saving…" : "Save website")</button></div>
+        </fieldset>
+    </EditForm>
+</dialog>
+
+@code {
+    private List<JobSearchWebsite>? sites;
+    private JobSearchWebsite draft = new();
+    private bool busy;
+    private ElementReference editor;
+    private IJSObjectReference? editorModule;
+    private string? editorError;
+    private bool openRequested;
+    private string? error;
+    private string? notice;
+
+    protected override Task OnInitializedAsync() => Run(async () => sites = await Websites.ListAsync(), null);
+    private async Task New()
+    {
+        draft = new();
+        await OpenEditor();
+    }
+    private async Task Edit(JobSearchWebsite site)
+    {
+        draft = new() { Id = site.Id, Name = site.Name, Domain = site.Domain, IsEnabled = site.IsEnabled };
+        await OpenEditor();
+    }
+    private Task OpenEditor()
+    {
+        editorError = null;
+        openRequested = true;
+        return Task.CompletedTask;
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!openRequested) return;
+        openRequested = false;
+        editorModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/JobWebsites.razor.js");
+        await editorModule.InvokeVoidAsync("open", editor);
+    }
+    private async Task Cancel()
+    {
+        if (!busy && editorModule is not null) await editorModule.InvokeVoidAsync("close", editor);
+    }
+    private async Task Save()
+    {
+        if (busy) return;
+        await Run(() => Websites.SaveAsync(draft), "Website saved.", inEditor: true);
+        if (editorError is null && editorModule is not null) await editorModule.InvokeVoidAsync("close", editor);
+    }
+    private Task Toggle(JobSearchWebsite site) => Run(() => Websites.SaveAsync(new JobSearchWebsite { Id = site.Id, Name = site.Name, Domain = site.Domain, IsEnabled = !site.IsEnabled }), "Website updated.");
+    private Task Delete(int id) => Run(async () => { await Websites.DeleteAsync(id); }, "Website removed from future searches.");
+
+    private async Task Run(Func<Task> operation, string? message, bool inEditor = false)
+    {
+        if (busy) return;
+        busy = true; error = null; editorError = null; notice = null;
+        try { await operation(); sites = await Websites.ListAsync(); notice = message; }
+        catch (System.ComponentModel.DataAnnotations.ValidationException ex) { SetError(ex.Message, inEditor); }
+        catch (UnauthorizedAccessException) { SetError("Site administrator access is required.", inEditor); }
+        catch (Exception)
+        {
+            Logger.LogError("Could not manage job search websites.");
+            SetError("Could not update websites. Check the database migration and connection, then try again.", inEditor);
+        }
+        finally { busy = false; }
+    }
+    private void SetError(string message, bool inEditor)
+    {
+        if (inEditor) editorError = message;
+        else error = message;
+    }
+    public async ValueTask DisposeAsync()
+    {
+        if (editorModule is not null)
+        {
+            try { await editorModule.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+        }
+    }
+
+}

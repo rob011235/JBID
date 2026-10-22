@@ -5,6 +5,8 @@
     <nav aria-label="Main navigation">
         <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
         <NavLink href="/projects">Projects</NavLink>
+        <NavLink href="/configuration">Configuration</NavLink>
+        <AuthorizeView Policy="SiteAdmin"><Authorized><NavLink href="/admin/job-websites">Job websites</NavLink></Authorized></AuthorizeView>
         <AuthorizeView>
             <Authorized>
                 <NavLink href="/Account/Manage">Account</NavLink>

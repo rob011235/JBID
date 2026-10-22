@@ -1,0 +1,48 @@
+.announcement-title {
+    text-align: left;
+    padding: 0;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+.announcement-table {
+    min-width: 800px;
+}
+.announcement-details {
+    width: min(58rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 1.75rem;
+    color: var(--ink);
+    box-shadow: 0 24px 80px #102c4240;
+}
+.announcement-details::backdrop {
+    background: #102c4280;
+}
+.details-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.details-heading h2 {
+    margin: 0;
+}
+.details-heading .btn-close {
+    flex-shrink: 0;
+}
+.source-text {
+    white-space: pre-wrap;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: .5rem;
+    padding: 1rem;
+}
+.details-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}

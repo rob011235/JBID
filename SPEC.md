@@ -50,7 +50,7 @@ Enable an educator to create a curriculum project, collect job announcement evid
 - Navigate from an objective to its supporting excerpts and announcements, including the original URLs.
 - Navigate from an announcement to the objectives it supports.
 - Validate required fields and show understandable validation messages.
-- Preserve evidence relationships when records are edited. Deletion workflows are deferred for this iteration.
+- Preserve evidence relationships when records are edited. Source pruning was added in Iteration 2.
 
 ### Outside this iteration
 
@@ -114,3 +114,64 @@ The following capabilities describe the intended direction. Their order and scop
 - **Style:** Modern navy and teal, responsive layouts, accessible navigation, and visible keyboard focus.
 - **Home page:** Describe the purpose and current workflow, distinguish future capabilities, and link to the Projects workspace at `/projects`.
 - **Identity:** Original SVG logo and matching favicon connecting job evidence, learning objectives, and human review.
+
+## Iteration 2 — Job discovery (incremental scope)
+
+**Status:** Implemented; automated checks pass; live acceptance pending.
+
+The intended workflow is to describe an occupation, search for related announcements using Tavily, save all discovered sources directly, and prune later into a curriculum project. Jev relevance evaluation and objective generation are deferred.
+
+### Account configuration increment
+
+- Provide a signed-in Configuration page for each user's own Tavily API key.
+- Mask entry; show configured/unconfigured status without displaying a stored key.
+- Allow saving, replacing, and removing the credential. Never log its plaintext value.
+- Protect the key server-side using ASP.NET Core Data Protection with account-specific purposes, and persist it in the existing Identity user-token table.
+- Reject anonymous credential operations and isolate credentials by authenticated account. Account deletion removes its credential.
+- Saving validates formatting only. It makes no provider calls, consumes no Tavily credits, and does not claim to verify the key or enforce free-tier limits.
+- Verify credential protection, isolation, replacement, removal, validation, and anonymous rejection with synthetic-key integration checks. Live account-page acceptance and restart verification remain pending where the environment cannot run SQL Server or persist the default encryption key ring.
+
+### Automatic collection and later pruning
+
+- Enter a job description or search query and run **Find and save announcements**. Save every unique result to the project automatically, without search-term review, result selection, employer entry, or per-item import.
+- Request up to 20 results with one basic Tavily search. Retrieve full plain text automatically for new sources in batches of five.
+- Persist results before extraction so failed or interrupted retrieval does not lose discovered items. If full text is unavailable, retain a clearly marked search preview with the source URL. Do not represent preview text as the full announcement.
+- Record unknown employers as **Not identified** rather than requiring entry or guessing an employer. Allow normal editing later.
+- Preserve source URLs, collection dates, and query provenance. Skip existing URLs in the project on repeated searches.
+- Provide individual and bulk deletion on the project's announcement list. Delete related evidence links atomically, retain objectives, and return affected approved objectives to Draft. Reject cross-project deletion requests.
+- Filtering for relevance belongs to the later announcement-to-objective conversion. Collection does not require manual filtering or LLM classification.
+- Retain encrypted per-account keys, bounded requests, sanitized errors, and persistent credit reservations. A run reserves up to five credits: one search and up to four extraction batches. The monthly allowance defaults to 900 credits per account, configurable through `Tavily:MonthlyCreditLimit` (0–1,000). Keep paid usage disabled at Tavily.
+
+### Completion criteria
+
+1. One query action saves results directly to the project's announcement list.
+2. Full text replaces saved previews when available; failed extraction retains marked previews.
+3. Repeating a query skips existing source URLs.
+4. Individual and bulk pruning remove announcements and associated evidence without deleting objectives or leaving stale approvals.
+5. Existing key isolation, provider-failure handling, credit limits, and traceability continue to work.
+
+### Scope decision
+
+**2026-10-22:** Replace the review-and-import workflow with immediate collection and later pruning at the user's direction. Use objective conversion for relevance filtering.
+
+The existing `AddAnnouncementDiscoveryProvenance` migration remains necessary if not already applied. This change requires no additional migration.
+
+Validation: build passes with zero warnings/errors; simulated-provider and relational checks pass for automatic saving, full-text enrichment, preview fallback, duplicates, and individual/bulk source deletion with approval invalidation. Live provider/browser acceptance remains pending.
+
+## Managed job search websites
+
+**2026-10-22 scope addition:** Restrict discovery to administrator-managed job websites while preserving the single-action search-and-save workflow.
+
+- Persist website name, normalized unique domain, and enabled status in a `JobSearchWebsites` table.
+- Seed Indeed, LinkedIn Jobs, Glassdoor, ZipRecruiter, Dice, and USAJOBS as enabled via the `AddJobSearchWebsites` migration.
+- Provide `/admin/job-websites` for adding, editing, enabling/disabling, and deleting entries. Enforce the SiteAdmin policy in both the page and management service.
+- Designate the administrator explicitly through server configuration `SiteAdmin:Email` matching the authenticated account email. A blank value grants no administrative access. No account becomes administrator merely by registering.
+- Pass enabled domains as restrictive Tavily parameters and reject off-list or lookalike-domain results locally. Allow legitimate subdomains. If no sites are enabled, stop without making provider calls or spending credits.
+- Apply website settings to future discovery; do not alter previously collected announcements. Administrative edits and deletions persist across restarts.
+- Validate six seed rows, administrator authorization, normalization and duplicate rejection, CRUD persistence, enabled-domain request parameters, local response filtering, and the empty-list credit guard using isolated relational and simulated-provider checks.
+
+Managed website validation: build and automated checks pass with zero warnings/errors. EF reports no pending model changes. Applying the migration was attempted, but LocalDB could not start in the implementation environment; apply it from the normal development session. Live browser/provider acceptance remains pending.
+
+**2026-10-22 presentation update:** The job website add/edit form opens in a modal dialog. Save refreshes the website table; Cancel, Close, or Escape dismisses unsaved changes. Validation stays inside the editor.
+
+**2026-10-22 presentation update:** Show announcements in a table with clickable titles and Details buttons opening a read-only modal for text, source metadata, search provenance, and linked objectives. Keep pruning and editing accessible from the table; source references on objectives also open the detail modal.

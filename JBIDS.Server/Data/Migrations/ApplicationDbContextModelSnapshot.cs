@@ -121,6 +121,14 @@ namespace JBIDS.Server.Migrations
                     b.Property<DateTime>("CollectedOn")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DiscoveryDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("DiscoveryQuery")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
                     b.Property<string>("Employer")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -148,6 +156,79 @@ namespace JBIDS.Server.Migrations
                     b.HasIndex("ProjectId");
 
                     b.ToTable("Announcements");
+                });
+
+            modelBuilder.Entity("JBIDS.Server.Data.JobSearchWebsite", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(253)
+                        .HasColumnType("nvarchar(253)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Domain")
+                        .IsUnique();
+
+                    b.ToTable("JobSearchWebsites");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Domain = "indeed.com",
+                            IsEnabled = true,
+                            Name = "Indeed"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Domain = "linkedin.com",
+                            IsEnabled = true,
+                            Name = "LinkedIn Jobs"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Domain = "glassdoor.com",
+                            IsEnabled = true,
+                            Name = "Glassdoor"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Domain = "ziprecruiter.com",
+                            IsEnabled = true,
+                            Name = "ZipRecruiter"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Domain = "dice.com",
+                            IsEnabled = true,
+                            Name = "Dice"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Domain = "usajobs.gov",
+                            IsEnabled = true,
+                            Name = "USAJOBS"
+                        });
                 });
 
             modelBuilder.Entity("JBIDS.Server.Data.ObjectiveEvidence", b =>

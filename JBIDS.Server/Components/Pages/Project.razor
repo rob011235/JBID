@@ -1,4 +1,6 @@
 @page "/projects/{ProjectId:int}"
+@implements IAsyncDisposable
+@inject IJSRuntime JS
 @rendermode InteractiveServer
 @using JBIDS.Server.Data
 @using JBIDS.Server.Services
@@ -18,20 +20,39 @@ else
     <fieldset disabled="@busy">
     <section id="announcements">
     <h2>Job announcements</h2>
+    <a class="btn btn-primary mb-3 me-2" href="/projects/@ProjectId/find-jobs">Find job announcements</a>
     <button class="btn btn-outline-primary mb-3" @onclick="NewAnnouncement">Add announcement</button>
     @if (announcements.Count == 0) { <p>Add an announcement and paste its text to preserve your source evidence.</p> }
-    @foreach (var a in announcements)
+    @if (announcements.Count > 0)
     {
-        <article class="card mb-3" id="announcement-@a.Id">
-        <div class="card-body">
-            <h3 class="h5">@a.Title</h3><p>@a.Employer · Collected @a.CollectedOn.ToString("yyyy-MM-dd")</p>
-            <a href="@a.Url" target="_blank" rel="noopener noreferrer">Open original announcement</a>
-            <details class="my-2"><summary>Preserved announcement text</summary><p style="white-space:pre-wrap">@a.Text</p></details>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditAnnouncement(a)">Edit announcement</button>
-            <p class="mt-2 mb-0">Supporting objectives:</p>
-            <ul>@foreach (var o in objectives.Where(o => evidence.Any(e => e.ObjectiveId == o.Id && e.AnnouncementId == a.Id)))
-            { <li><a href="#objective-@o.Id">@o.Text</a> (@o.Status)</li> }</ul>
-        </div></article>
+        <button class="btn btn-outline-danger mb-3 ms-2" disabled="@(selectedAnnouncements.Count == 0)" @onclick="DeleteSelected">Delete selected (@selectedAnnouncements.Count)</button>
+        <p class="small text-muted">Deleting a source also removes its evidence links. Affected approved objectives return to Draft.</p>
+    }
+    @if (announcements.Count > 0)
+    {
+        <div class="table-responsive">
+        <table class="table align-middle announcement-table">
+            <caption>Saved job announcements. Open a title or select Details to view the source text.</caption>
+            <thead><tr><th scope="col">Select</th><th scope="col">Job title</th><th scope="col">Employer</th><th scope="col">Collected</th><th scope="col">Content</th><th scope="col">Objectives</th><th scope="col">Actions</th></tr></thead>
+            <tbody>
+            @foreach (var a in announcements)
+            {
+                <tr id="announcement-@a.Id" @key="a.Id">
+                    <td><input type="checkbox" aria-label="Select @a.Title for deletion" checked="@selectedAnnouncements.Contains(a.Id)" @onchange="e => SelectAnnouncement(a.Id, e.Value is true)" /></td>
+                    <td><button class="btn btn-link announcement-title" @onclick="() => OpenDetails(a)">@a.Title</button></td>
+                    <td>@a.Employer</td><td class="text-nowrap">@a.CollectedOn.ToString("yyyy-MM-dd")</td>
+                    <td>@(a.Text.StartsWith("[Search preview", StringComparison.Ordinal) ? "Preview" : "Full text")</td>
+                    <td>@objectives.Count(o => evidence.Any(e => e.ObjectiveId == o.Id && e.AnnouncementId == a.Id))</td>
+                    <td><div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" aria-label="View details for @a.Title" @onclick="() => OpenDetails(a)">Details</button>
+                        <button class="btn btn-sm btn-outline-secondary" aria-label="Edit @a.Title" @onclick="() => EditAnnouncement(a)">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" aria-label="Delete @a.Title" @onclick="() => DeleteAnnouncement(a.Id)">Delete</button>
+                    </div></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        </div>
     }
     @if (announcement is not null)
     {
@@ -107,8 +128,45 @@ else
     </section>
     </fieldset>
 }
+<dialog class="announcement-details" @ref="detailsDialog" aria-labelledby="announcement-details-title">
+    <div class="details-heading">
+        <h2 id="announcement-details-title">@(detail?.Title ?? "Announcement details")</h2>
+        <button type="button" class="btn-close" aria-label="Close announcement details" autofocus @onclick="CloseDetails" />
+    </div>
+    @if (detail is not null)
+    {
+        <dl class="row">
+            <dt class="col-sm-3">Employer</dt><dd class="col-sm-9">@detail.Employer</dd>
+            <dt class="col-sm-3">Collected</dt><dd class="col-sm-9">@detail.CollectedOn.ToString("yyyy-MM-dd")</dd>
+            <dt class="col-sm-3">Source</dt><dd class="col-sm-9"><a href="@detail.Url" target="_blank" rel="noopener noreferrer">@detail.Url</a></dd>
+        </dl>
+        @if (detail.Text.StartsWith("[Search preview", StringComparison.Ordinal))
+        {
+            <p class="alert alert-info">This is a saved search preview. Full page text was unavailable.</p>
+        }
+        <h3>Announcement text</h3>
+        <div class="source-text">@detail.Text</div>
+        @if (!string.IsNullOrWhiteSpace(detail.DiscoveryQuery))
+        {
+            <details class="my-3"><summary>Search provenance</summary><p>Job description: @detail.DiscoveryDescription</p><p>Search query: @detail.DiscoveryQuery</p></details>
+        }
+        <h3 class="mt-4">Supporting objectives</h3>
+        var related = objectives.Where(o => evidence.Any(e => e.ObjectiveId == o.Id && e.AnnouncementId == detail.Id)).ToList();
+        @if (related.Count == 0) { <p>No objectives linked yet.</p> }
+        else
+        {
+            <ul>@foreach (var o in related) { <li><a href="#objective-@o.Id" @onclick="CloseDetails">@o.Text</a> (@o.Status)</li> }</ul>
+        }
+    }
+    <div class="details-actions"><button class="btn btn-primary" @onclick="CloseDetails">Close</button></div>
+</dialog>
 @code {
     [Parameter] public int ProjectId { get; set; }
+    private readonly HashSet<int> selectedAnnouncements = new HashSet<int>();
+    private ElementReference detailsDialog;
+    private IJSObjectReference? detailsModule;
+    private JobAnnouncement? detail;
+    private bool openDetailsRequested;
     private CurriculumProject? project;
     private List<JobAnnouncement> announcements = [];
     private List<TrainingObjective> objectives = [];
@@ -122,9 +180,36 @@ else
     private bool busy;
     protected override async Task OnParametersSetAsync()
     {
+        if (detailsModule is not null) await CloseDetails();
+        detail = null;
+        selectedAnnouncements.Clear();
         project = null; loaded = false; announcement = null; objective = null; link = null;
         await Run(async () => { await Load(); }, null);
         loaded = true;
+    }
+    private void OpenDetails(JobAnnouncement source)
+    {
+        detail = source;
+        openDetailsRequested = true;
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!openDetailsRequested) return;
+        openDetailsRequested = false;
+        detailsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Project.razor.js");
+        await detailsModule.InvokeVoidAsync("open", detailsDialog);
+    }
+    private async Task CloseDetails()
+    {
+        if (detailsModule is not null) await detailsModule.InvokeVoidAsync("close", detailsDialog);
+    }
+    public async ValueTask DisposeAsync()
+    {
+        if (detailsModule is not null)
+        {
+            try { await detailsModule.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+        }
     }
     private async Task Load()
     {
@@ -142,8 +227,24 @@ else
         catch (Exception ex) { Logger.LogError(ex, "Curriculum operation failed"); error = "Could not complete this operation. Check the database connection and try again."; }
         finally { busy = false; }
     }
+    private void SelectAnnouncement(int id, bool selected)
+    {
+        if (selected) selectedAnnouncements.Add(id);
+        else selectedAnnouncements.Remove(id);
+    }
+    private Task DeleteAnnouncement(int id) => DeleteAnnouncements(new[] { id });
+    private Task DeleteSelected() => DeleteAnnouncements(selectedAnnouncements.ToArray());
+    private Task DeleteAnnouncements(int[] ids) => Run(async () =>
+    {
+        await Store.DeleteAnnouncementsAsync(ProjectId, ids);
+        selectedAnnouncements.Clear();
+        if (announcement is not null && ids.Contains(announcement.Id)) announcement = null;
+        link = null;
+        objective = null;
+        await Load();
+    }, "Announcements deleted. Affected approved objectives returned to Draft.");
     private void NewAnnouncement() => announcement = new() { ProjectId = ProjectId };
-    private void EditAnnouncement(JobAnnouncement a) => announcement = new() { Id = a.Id, ProjectId = a.ProjectId, Title = a.Title, Employer = a.Employer, Url = a.Url, Text = a.Text, CollectedOn = a.CollectedOn };
+    private void EditAnnouncement(JobAnnouncement a) => announcement = new() { Id = a.Id, ProjectId = a.ProjectId, Title = a.Title, Employer = a.Employer, Url = a.Url, Text = a.Text, CollectedOn = a.CollectedOn, DiscoveryQuery = a.DiscoveryQuery, DiscoveryDescription = a.DiscoveryDescription };
     private void NewObjective() => objective = new() { ProjectId = ProjectId };
     private void EditObjective(TrainingObjective o) => objective = new() { Id = o.Id, ProjectId = o.ProjectId, Text = o.Text, Level = o.Level, Status = o.Status };
     private void NewEvidence(int id) => link = new() { ObjectiveId = id };

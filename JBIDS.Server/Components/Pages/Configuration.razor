@@ -1,0 +1,113 @@
+@page "/configuration"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using System.ComponentModel.DataAnnotations
+@using JBIDS.Server.Services
+@inject TavilyConfigurationService Settings
+@inject ILogger<Configuration> Logger
+
+<PageTitle>Configuration | JBIDS</PageTitle>
+<p class="eyebrow">Your account</p>
+<h1>Configuration</h1>
+<p>Connect your own services to JBIDS. These settings belong to your signed-in account.</p>
+<div class="card" style="max-width: 44rem">
+    <div class="card-body">
+        <h2>Tavily search</h2>
+        <p>Add your Tavily API key to find job announcements within a curriculum project. Saving a key does not run searches or spend credits.</p>
+        <p><a href="https://app.tavily.com" target="_blank" rel="noopener noreferrer">Get a key from Tavily <span aria-hidden="true">↗</span></a></p>
+        @if (error is not null) { <div class="alert alert-danger" role="alert">@error</div> }
+        @if (notice is not null) { <div class="alert alert-success" role="status">@notice</div> }
+        @if (!loaded)
+        {
+            <p role="status">Loading configuration…</p>
+        }
+        else
+        {
+            <p><strong>Status:</strong> @(configured ? "Key saved" : "No key configured")</p>
+            <EditForm Model="input" OnValidSubmit="Save" FormName="tavily-configuration">
+                <DataAnnotationsValidator /><ValidationSummary />
+                <label for="tavily-key">@(configured ? "Replacement API key" : "API key")</label>
+                <InputText id="tavily-key" type="password" class="form-control mb-2" @bind-Value="input.ApiKey" autocomplete="new-password" spellcheck="false" autocapitalize="none" maxlength="1024" aria-describedby="key-help" disabled="@busy" />
+                <p id="key-help" class="text-muted small">The key is encrypted in the server database and is never displayed again. Leave this field empty to keep your existing key. Saving does not verify the key with Tavily.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-primary" disabled="@busy">@(busy ? "Working…" : configured ? "Replace key" : "Save key")</button>
+                    @if (configured)
+                    {
+                        <button type="button" class="btn btn-outline-danger" disabled="@busy" @onclick="Remove">Remove saved key</button>
+                    }
+                </div>
+            </EditForm>
+        }
+        <p class="small text-muted mt-3 mb-0">Manage your plan and billing directly with Tavily. A saved key does not enforce Tavily's free-tier limit; JBIDS limits and tracks its own search requests. Check Tavily for actual account-wide usage and keep paid usage disabled there.</p>
+    </div>
+</div>
+
+@code {
+    private readonly KeyInput input = new();
+    private bool loaded;
+    private bool configured;
+    private bool busy;
+    private string? error;
+    private string? notice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            configured = await Settings.IsConfiguredAsync();
+            loaded = true;
+        }
+        catch (Exception)
+        {
+            Logger.LogError("Could not load Tavily configuration.");
+            error = "Could not load configuration. Check your sign-in and database connection, then reload the page.";
+        }
+    }
+
+    private Task Save() => Run(async () =>
+    {
+        await Settings.SaveAsync(input.ApiKey);
+        configured = true;
+    }, "API key saved. It has not yet been verified with Tavily.");
+
+    private Task Remove() => Run(async () =>
+    {
+        await Settings.RemoveAsync();
+        configured = false;
+    }, "Your saved Tavily API key has been removed.");
+
+    private async Task Run(Func<Task> operation, string success)
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        notice = null;
+        try
+        {
+            await operation();
+            notice = success;
+        }
+        catch (ValidationException ex)
+        {
+            error = ex.Message;
+        }
+        catch (Exception)
+        {
+            // Do not log exception details or submitted values for credential operations.
+            Logger.LogError("Could not update Tavily configuration.");
+            error = "Could not update your key. Check your sign-in, database connection, and server encryption-key storage, then try again.";
+        }
+        finally
+        {
+            input.ApiKey = string.Empty;
+            busy = false;
+        }
+    }
+
+    private sealed class KeyInput
+    {
+        [Required(ErrorMessage = "Enter an API key to save or replace it.")]
+        [StringLength(1024)]
+        public string ApiKey { get; set; } = string.Empty;
+    }
+}

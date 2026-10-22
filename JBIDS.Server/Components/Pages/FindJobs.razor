@@ -1,0 +1,91 @@
+@page "/projects/{ProjectId:int}/find-jobs"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using System.ComponentModel.DataAnnotations
+@using JBIDS.Server.Data
+@using JBIDS.Server.Services
+@inject CurriculumService Store
+@inject TavilyConfigurationService Keys
+@inject TavilyUsageService Usage
+@inject JobDiscoveryService Discovery
+@inject ILogger<FindJobs> Logger
+@inject NavigationManager Navigation
+
+<PageTitle>Find job announcements | JBIDS</PageTitle>
+<a href="/projects/@ProjectId#announcements">Back to announcements</a>
+<h1 class="mt-3">Find job announcements</h1>
+@if (error is not null) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (notice is not null) { <div class="alert alert-success" role="status">@notice <a href="/projects/@ProjectId#announcements">View saved announcements</a></div> }
+@foreach (var message in Discovery.Messages) { <p class="alert alert-warning">@message</p> }
+@if (!loaded) { <p>Loading…</p> }
+else if (project is null) { <p>Project not found.</p> }
+else if (!configured) { <p>Save your Tavily key in <a href="/configuration">Configuration</a>, then reload this page.</p> }
+else
+{
+    <p>Search the enabled job websites for <strong>@project.Name</strong>. Results are saved automatically. You can delete unwanted announcements from the project later.</p>
+    <EditForm Model="input" OnValidSubmit="Search" FormName="find-jobs">
+        <DataAnnotationsValidator /><ValidationSummary />
+        <label for="job-query">Describe the job or enter a search query</label>
+        <InputTextArea id="job-query" class="form-control mb-3" maxlength="400" rows="3" @bind-Value="input.Query" disabled="@busy" />
+        <button class="btn btn-primary" disabled="@busy">@(busy ? "Finding and saving announcements…" : "Find and save announcements")</button>
+    </EditForm>
+    <p class="small text-muted mt-3">Up to 20 results per search. Full text is retrieved automatically where available; otherwise a clearly marked search preview is saved. Employer details can be edited later.</p>
+    <p class="small text-muted">Up to 5 credits per search including text retrieval. Monthly allowance: @reserved / @Usage.Limit reserved. Keep paid usage disabled in Tavily.</p>
+}
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+    private readonly SearchInput input = new();
+    private CurriculumProject? project;
+    private bool configured;
+    private bool loaded;
+    private bool busy;
+    private int reserved;
+    private string? error;
+    private string? notice;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Run(async () =>
+        {
+            project = await Store.ProjectAsync(ProjectId);
+            configured = await Keys.IsConfiguredAsync();
+            input.Query = project?.Name ?? string.Empty;
+            loaded = true;
+        });
+    }
+
+    private Task Search() => Run(async () =>
+    {
+        var count = await Discovery.FindAndSaveAsync(ProjectId, input.Query.Trim());
+        notice = count == 0 ? "No new announcements saved. Existing URLs are skipped." : $"Saved {count} new announcements to your project.";
+        if (count > 0) Navigation.NavigateTo($"/projects/{ProjectId}#announcements");
+    });
+
+    private async Task Run(Func<Task> operation)
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        notice = null;
+        try { await operation(); }
+        catch (ValidationException ex) { error = ex.Message; }
+        catch (InvalidOperationException ex) { error = ex.Message; }
+        catch (Exception)
+        {
+            Logger.LogError("Automatic announcement collection failed.");
+            error = "Could not finish the search. Some announcements may already be saved; check your project before retrying.";
+        }
+        finally
+        {
+            try { reserved = await Usage.ReservedAsync(); }
+            catch (Exception) { error ??= "Could not read your search allowance."; }
+            busy = false;
+        }
+    }
+
+    private sealed class SearchInput
+    {
+        [Required, StringLength(400)] public string Query { get; set; } = string.Empty;
+    }
+}
