@@ -27,10 +27,12 @@ namespace JBIDS
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents()
+                .AddHubOptions(options => options.MaximumReceiveMessageSize = 2 * 1024 * 1024)
                 .AddInteractiveWebAssemblyComponents()
                 .AddAuthenticationStateSerialization();
 
             builder.Services.AddCascadingAuthenticationState();
+            builder.Services.AddAuthorization(options => JBIDS.Server.Services.SiteAdminPolicy.Configure(options, builder.Configuration));
             builder.Services.AddScoped<IdentityRedirectManager>();
             builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
@@ -46,7 +48,15 @@ namespace JBIDS
                 options.UseSqlServer(connectionString));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
             builder.Services.AddScoped<JBIDS.Server.Services.CurriculumService>();
+            builder.Services.AddScoped<JBIDS.Server.Services.JobSearchWebsiteService>();
             builder.Services.AddScoped<JBIDS.Server.Services.TavilyConfigurationService>();
+            builder.Services.AddScoped<JBIDS.Server.Services.TavilyUsageService>();
+            builder.Services.AddHttpClient<JBIDS.Server.Services.JobDiscoveryService>(client =>
+                {
+                    client.Timeout = TimeSpan.FromSeconds(45);
+                })
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false })
+                .RemoveAllLoggers();
 
             builder.Services.AddIdentityCore<ApplicationUser>(options =>
                 {

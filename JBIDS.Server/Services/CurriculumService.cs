@@ -217,5 +217,68 @@ public sealed class CurriculumService(IDbContextFactory<ApplicationDbContext> fa
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Imports a source once per project, preserving existing evidence on duplicate attempts.</summary>
+    /// <param name="input">The reviewed announcement and search provenance.</param>
+    /// <returns>True when inserted, or false when the URL or exact trimmed text is already present.</returns>
+    public async Task<bool> ImportAnnouncementAsync(JobAnnouncement input)
+    {
+        Validate(input);
+        var normalized = JobDiscoveryService.NormalizeUrl(input.Url);
+        if (input.Id != 0 || normalized is null || input.Text.Length > 250000)
+        {
+            throw new System.ComponentModel.DataAnnotations.ValidationException("Enter a public source URL and announcement text of up to 250,000 characters.");
+        }
+
+        await using var db = await factory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        if (!await db.Projects.AnyAsync(p => p.Id == input.ProjectId))
+        {
+            throw new System.ComponentModel.DataAnnotations.ValidationException("Project not found.");
+        }
+
+        var existing = await db.Announcements.Where(a => a.ProjectId == input.ProjectId).ToListAsync();
+        if (existing.Any(a => JobDiscoveryService.NormalizeUrl(a.Url) == normalized || a.Text.Trim() == input.Text.Trim()))
+        {
+            return false;
+        }
+
+        input.Url = normalized;
+        db.Announcements.Add(input);
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return true;
+    }
+
+    /// <summary>Deletes selected sources and their evidence links, returning affected approvals to Draft.</summary>
+    /// <param name="projectId">The owning curriculum project.</param>
+    /// <param name="ids">The announcement identifiers to prune.</param>
+    /// <returns>The number of announcements removed.</returns>
+    public async Task<int> DeleteAnnouncementsAsync(int projectId, IReadOnlyCollection<int> ids)
+    {
+        var selected = ids.Distinct().ToArray();
+        if (selected.Length == 0)
+        {
+            return 0;
+        }
+
+        await using var db = await factory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var sources = await db.Announcements.Where(a => a.ProjectId == projectId && selected.Contains(a.Id)).ToListAsync();
+        if (sources.Count != selected.Length)
+        {
+            throw new ValidationException("Choose announcements from this project. Nothing was deleted.");
+        }
+
+        var links = await db.Evidence.Where(e => selected.Contains(e.AnnouncementId)).ToListAsync();
+        var affected = links.Select(e => e.ObjectiveId).ToArray();
+        var objectives = await db.Objectives.Where(o => affected.Contains(o.Id) && o.Status == ReviewStatus.Approved).ToListAsync();
+        objectives.ForEach(o => o.Status = ReviewStatus.Draft);
+        db.Evidence.RemoveRange(links);
+        db.Announcements.RemoveRange(sources);
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return sources.Count;
+    }
+
     private static void Validate(object value) => Validator.ValidateObject(value, new ValidationContext(value), validateAllProperties: true);
 }

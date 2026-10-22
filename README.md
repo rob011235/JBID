@@ -58,10 +58,52 @@ JBIDS stands for **Job Based Instructional Design System**. The home page explai
 
 ## Tavily configuration
 
-Open **Configuration** (`/configuration`) and sign in to save your own Tavily API key. You can save, replace, or remove it. The page reports whether a key is saved and never redisplays the stored key. Saving checks formatting only; it makes no Tavily requests and does not verify the key or spend credits. Job search and free-tier usage controls are not implemented in this configuration step.
+Open **Configuration** (`/configuration`) and sign in to save your own Tavily API key. You can save, replace, or remove it. The page reports whether a key is saved and never redisplays the stored key. Saving checks formatting only; it makes no Tavily requests and does not verify the key or spend credits. Use **Find job announcements** inside a project to search with this key.
 
-Credentials belong to the authenticated account, even though curriculum projects currently use a shared workspace. They are protected with ASP.NET Core Data Protection using a per-account purpose and stored in the existing Identity user-token table. No new database migration is required; existing Identity migrations must already be applied. Deleting an account deletes its stored credential.
+Credentials belong to the authenticated account, even though curriculum projects currently use a shared workspace. They are protected with ASP.NET Core Data Protection using a per-account purpose and stored in the existing Identity user-token table. Credential storage needs no additional schema changes; discovery requires the migration described below. Existing Identity migrations must already be applied. Deleting an account deletes its stored credential.
 
 Use HTTPS when entering credentials. Preserve the server's Data Protection key ring across restarts and deployments, alongside database backups; losing it makes saved credentials unreadable and users must replace them. The server identity needs permission to write its key ring. Server administrators who control the application and key ring can decrypt credentials. Do not enable sensitive-data logging or request-body logging for credential operations.
 
 The integration checks use synthetic credentials to verify encryption at rest, account isolation, replacement, removal, validation, and rejection of anonymous access. They never contact Tavily.
+
+## Find job announcements
+
+Open **Projects**, open a project, and click **Find job announcements**. Enter a job description or query and click **Find and save announcements**. All unique results are saved directly to that project's Job announcements list. There is no selection, employer-entry, or per-item import step.
+
+Full source text is retrieved automatically where available. If retrieval fails or the extraction allowance is exhausted, the saved item retains a clearly marked search preview and its original URL. Missing employers are recorded as **Not identified**, editable later. Repeating a query skips existing URLs.
+
+Return to the project to view, edit, or prune saved announcements. Each has a **Delete announcement** button; check multiple announcements and use **Delete selected** to prune in bulk. Deletion removes the sources and their evidence links, keeps the objectives, and returns affected approved objectives to Draft. Filtering for relevance belongs to the later announcement-to-objective conversion workflow.
+
+Each search returns up to 20 results. JBIDS reserves one credit for the basic query and up to four more credits for automatic extraction in batches of five. Existing URLs do not need extraction. Failed or uncertain requests retain their reservations; the persistent counter is conservative rather than Tavily's billing total. The monthly allowance defaults to 900 reserved credits per account (`Tavily:MonthlyCreditLimit`, 0–1,000). Keep paid usage disabled at Tavily; the JBIDS counter cannot account for other applications sharing a key.
+
+The earlier `AddAnnouncementDiscoveryProvenance` migration must be applied if not already installed. This simplification adds no new database migration.
+
+Automated checks use simulated provider responses and cover automatic saving, preview fallback, duplicate URLs, individual/bulk pruning, and approval invalidation without live API credits.
+
+## Manage job search websites (site administrator)
+
+Apply the `AddJobSearchWebsites` migration:
+
+```powershell
+dotnet ef database update --project JBIDS.Server
+```
+
+It creates `JobSearchWebsites` and seeds six enabled domains: **Indeed** (`indeed.com`), **LinkedIn Jobs** (`linkedin.com`), **Glassdoor** (`glassdoor.com`), **ZipRecruiter** (`ziprecruiter.com`), **Dice** (`dice.com`), and **USAJOBS** (`usajobs.gov`). The seed is part of the migration; restarting does not recreate deleted sites or overwrite administrator edits.
+
+Designate the site administrator explicitly using the existing account's sign-in email. For local development:
+
+```powershell
+dotnet user-secrets set "SiteAdmin:Email" "your-sign-in-email@example.com" --project JBIDS.Server
+```
+
+For deployment, set the server environment variable `SiteAdmin__Email`. The default is blank, which grants no account administrator access. There is no first-registrant administrator assignment. The policy requires an authenticated server-issued email claim matching this installation-controlled value. Restart the application after setup.
+
+Sign in as that account and select **Job websites**, or open `/admin/job-websites`. Add, edit, enable/disable, or delete domains. Management is protected both on the page and in the service. Ordinary users can continue searching the enabled sites.
+
+Enter domains such as `indeed.com`, without page paths or query parameters. Standard HTTP/HTTPS home URLs and leading `www.` are normalized to a lowercase domain. Duplicate domains are rejected.
+
+Every search sends the enabled domains to Tavily as restrictions. Results are also checked locally for an exact domain or subdomain match; an off-list site or lookalike domain is discarded before saving or extraction. With no enabled websites, search stops before contacting Tavily or reserving credits. Changes apply to future searches. Previously saved announcements remain available for normal pruning.
+
+The **Add website** and **Edit** actions open a modal editor. Save closes the modal and refreshes the table; Cancel, the close button, or Escape dismiss it without saving. Validation errors appear inside the modal.
+
+Announcements are listed in a table showing title, employer, collection date, content availability, and linked-objective count. Click a title or **Details** to open the full announcement in a modal, including its original URL, search provenance, and related objectives. Selection, editing, and individual/bulk deletion remain available on the project page.

@@ -1,0 +1,29 @@
+.website-editor {
+    width: min(40rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 1.75rem;
+    color: var(--ink);
+    box-shadow: 0 24px 80px #102c4240;
+}
+.website-editor::backdrop {
+    background: #102c4280;
+}
+.editor-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+.editor-heading h2 {
+    margin: 0;
+}
+.editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .75rem;
+    margin-top: .5rem;
+}

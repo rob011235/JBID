@@ -32,10 +32,21 @@ namespace JBIDS.Server.Data
         /// <summary>Gets the evidence stored in the database.</summary>
         public DbSet<ObjectiveEvidence> Evidence => this.Set<ObjectiveEvidence>();
 
+        /// <summary>Gets the site-wide job search websites.</summary>
+        public DbSet<JobSearchWebsite> JobSearchWebsites => this.Set<JobSearchWebsite>();
+
         /// <inheritdoc />
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            builder.Entity<JobSearchWebsite>().HasIndex(w => w.Domain).IsUnique();
+            builder.Entity<JobSearchWebsite>().HasData(
+                new JobSearchWebsite { Id = 1, Name = "Indeed", Domain = "indeed.com", IsEnabled = true },
+                new JobSearchWebsite { Id = 2, Name = "LinkedIn Jobs", Domain = "linkedin.com", IsEnabled = true },
+                new JobSearchWebsite { Id = 3, Name = "Glassdoor", Domain = "glassdoor.com", IsEnabled = true },
+                new JobSearchWebsite { Id = 4, Name = "ZipRecruiter", Domain = "ziprecruiter.com", IsEnabled = true },
+                new JobSearchWebsite { Id = 5, Name = "Dice", Domain = "dice.com", IsEnabled = true },
+                new JobSearchWebsite { Id = 6, Name = "USAJOBS", Domain = "usajobs.gov", IsEnabled = true });
             builder.Entity<JobAnnouncement>().HasOne<CurriculumProject>().WithMany().HasForeignKey(a => a.ProjectId).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<TrainingObjective>().HasOne<CurriculumProject>().WithMany().HasForeignKey(o => o.ProjectId).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<ObjectiveEvidence>().HasOne<TrainingObjective>().WithMany().HasForeignKey(e => e.ObjectiveId).OnDelete(DeleteBehavior.Restrict);
