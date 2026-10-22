@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="JBID.Client/JBID.Client.csproj" />
   <Project Path="JBID.Server/JBID.Server.csproj" />
+  <Project Path="JBID.Checks/JBID.Checks.csproj" />
 </Solution>

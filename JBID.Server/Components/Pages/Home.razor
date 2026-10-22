@@ -1,7 +1,51 @@
-﻿@page "/"
+@page "/"
+@rendermode InteractiveServer
+@using JBID.Server.Data
+@using JBID.Server.Services
+@inject CurriculumService Store
+@inject ILogger<Home> Logger
+@inject ILogger<Home> Logger
 
-<PageTitle>Home</PageTitle>
-
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
+<PageTitle>Curriculum projects | JBID</PageTitle>
+<h1>Curriculum projects</h1>
+<p>Build training objectives from employer evidence. Start a project or continue your work.</p>
+@if (error is not null) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (projects is null) { <p>Loading projects…</p> }
+else if (projects.Count == 0) { <p>No projects yet. Create your first project below.</p> }
+else
+{
+    <div class="list-group mb-4">
+        @foreach (var project in projects)
+        {
+            <a class="list-group-item list-group-item-action" href="projects/@project.Id"><strong>@project.Name</strong><br />@project.Description</a>
+        }
+    </div>
+}
+<h2>Create a project</h2>
+<EditForm Model="draft" OnValidSubmit="Create" FormName="project">
+    <DataAnnotationsValidator /><ValidationSummary />
+    <label for="name" class="form-label">Project name</label>
+    <InputText id="name" class="form-control mb-3" @bind-Value="draft.Name" />
+    <label for="description" class="form-label">Description</label>
+    <InputTextArea id="description" class="form-control mb-3" @bind-Value="draft.Description" />
+    <button class="btn btn-primary" disabled="@busy">Create project</button>
+</EditForm>
+@code {
+    private List<CurriculumProject>? projects;
+    private CurriculumProject draft = new();
+    private string? error;
+    private bool busy;
+    protected override async Task OnInitializedAsync()
+    {
+        try { projects = await Store.ProjectsAsync(); }
+        catch (Exception ex) { Logger.LogError(ex, "Loading curriculum projects failed"); error = "Could not load projects. Check the database connection and apply the database migrations."; }
+    }
+    private async Task Create()
+    {
+        busy = true;
+        try { await Store.SaveProjectAsync(draft); draft = new(); projects = await Store.ProjectsAsync(); error = null; }
+        catch (System.ComponentModel.DataAnnotations.ValidationException ex) { error = ex.Message; }
+        catch (Exception ex) { Logger.LogError(ex, "Saving a curriculum project failed"); error = "Could not save the project. Please try again."; }
+        finally { busy = false; }
+    }
+}
