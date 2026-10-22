@@ -1,10 +1,10 @@
-# JBID — Living Specification
+# JBIDS — Living Specification
 
 ## Product vision
 
-JBID helps educators build curricula grounded in employer needs. It connects evidence from job announcements and, eventually, subject matter experts to training objectives, courses, and degree plans.
+JBIDS helps educators build curricula grounded in employer needs. It connects evidence from job announcements and, eventually, subject matter experts to training objectives, courses, and degree plans.
 
-Educators remain responsible for reviewing and approving objectives. JBID preserves traceability so users can explain why an objective belongs in a curriculum and identify the evidence supporting it.
+Educators remain responsible for reviewing and approving objectives. JBIDS preserves traceability so users can explain why an objective belongs in a curriculum and identify the evidence supporting it.
 
 The application is an open source, MIT-licensed project that other academics can clone and use.
 
@@ -28,7 +28,7 @@ This is a living specification. Keep the product vision broad and add implementa
 
 ## Iteration 1 — Job announcements to reviewed objectives
 
-**Status:** Defined; not yet implemented.
+**Status:** Implemented; real-data acceptance review pending.
 
 ### Goal
 
@@ -91,9 +91,19 @@ The following capabilities describe the intended direction. Their order and scop
 
 | Iteration | Status | Outcome |
 | --- | --- | --- |
-| 1 — Job announcements to reviewed objectives | Defined | Implementation and validation pending. |
+| 1 — Job announcements to reviewed objectives | Implemented; acceptance pending | Manual project, announcement, objective, evidence, and review workflows delivered. Automated relational persistence checks pass; SQL Server and real-data UI acceptance remain pending. |
 
 ## Significant decisions
 
 - **2026-10-22:** Adopt a broad product vision with detailed specifications added incrementally. Avoid specifying the entire build in advance.
 - **2026-10-22:** Define Iteration 1 around manual evidence collection, objective authoring, human approval, and persistence. Defer direct LLM integration until the review workflow is usable.
+
+## Iteration 1 implementation and validation notes
+
+- Implemented with interactive Blazor Server components and EF Core using the existing SQL Server configuration. Each persistence operation uses a separate database context.
+- Added the `AddCurriculumWorkflow` migration and runnable `JBIDS.Checks` integration checks. See `README.md` for setup and check commands.
+- Automated checks pass against an isolated SQLite database: five synthetic announcements, ten approved objectives, many-to-many evidence, fresh-context persistence, validation, project isolation, rejection, and approval invalidation.
+- The solution builds with zero warnings and zero errors.
+- SQL Server LocalDB could not start in the implementation environment. The SQL migration script was generated; applying it and testing against SQL Server remain pending.
+- Browser verification was blocked by a connection timeout. Local startup also reported restricted access to the default data-protection key directory. Acceptance with five real announcements and ten real objectives, including restarting the application, remains pending.
+- This iteration provides a shared workspace for a locally operated installation. User-specific ownership, collaboration, and access rules remain outside its scope.
