@@ -1,6 +1,6 @@
 # JBIDS
 
-JBIDS helps educators turn job announcement evidence into reviewed training objectives. See [SPEC.md](SPEC.md) for the product vision and iterative scope.
+JBIDS (Job Based Instructional Design System) helps educators turn job announcement evidence into reviewed training objectives. See [SPEC.md](SPEC.md) for the product vision and iterative scope.
 
 ## Run locally
 
@@ -18,7 +18,7 @@ Open the address printed by the server. Apply migrations before using the projec
 
 ## Iteration 1 workflow
 
-1. Create a curriculum project on the home page.
+1. Open Projects from the home page and create a curriculum project.
 2. Open the project and add announcements, including their source URLs and pasted text.
 3. Add measurable training objectives and select their Bloom's levels.
 4. Add supporting announcement excerpts to each objective.
@@ -51,3 +51,7 @@ The automated checks use synthetic sources. Before considering Iteration 1 accep
 ## License
 
 MIT. Copyright (c) 2026 Robert Garner.
+
+## Site identity
+
+JBIDS stands for **Job Based Instructional Design System**. The home page explains the current evidence-to-objective workflow; the workspace is at `/projects`. The responsive navy and teal design includes an original SVG logo (`wwwroot/images/jbids-logo.svg`), standalone mark (`wwwroot/images/jbids-mark.svg`), and SVG favicon (`wwwroot/favicon.svg`), with PNG, ICO, and Apple touch icon variants. The mark connects source lines to a learning path and review check.

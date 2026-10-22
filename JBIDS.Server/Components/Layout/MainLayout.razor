@@ -1,23 +1,8 @@
 @inherits LayoutComponentBase
-
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <span>Job evidence → Training objectives → Human review</span>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<div class="site-shell">
+    <header class="site-header"><NavMenu /></header>
+    <main id="main-content" tabindex="-1" class="site-content">@Body</main>
+    <footer class="site-footer"><div><strong>JBIDS</strong><span>Job Based Instructional Design System</span></div><p>Evidence grounded. Educator guided.</p><small>© 2026 Robert Garner · Open source under the MIT License</small></footer>
 </div>
-
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+<div id="blazor-error-ui" data-nosnippet>Something interrupted your session. <a href=".">Reload the page</a> to reconnect.<button type="button" class="dismiss" aria-label="Dismiss error">×</button></div>
