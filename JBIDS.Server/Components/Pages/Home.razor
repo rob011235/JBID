@@ -1,51 +1,28 @@
 @page "/"
-@rendermode InteractiveServer
-@using JBIDS.Server.Data
-@using JBIDS.Server.Services
-@inject CurriculumService Store
-@inject ILogger<Home> Logger
-@inject ILogger<Home> Logger
-
-<PageTitle>Curriculum projects | JBIDS</PageTitle>
-<h1>Curriculum projects</h1>
-<p>Build training objectives from employer evidence. Start a project or continue your work.</p>
-@if (error is not null) { <div class="alert alert-danger" role="alert">@error</div> }
-@if (projects is null) { <p>Loading projects…</p> }
-else if (projects.Count == 0) { <p>No projects yet. Create your first project below.</p> }
-else
-{
-    <div class="list-group mb-4">
-        @foreach (var project in projects)
-        {
-            <a class="list-group-item list-group-item-action" href="projects/@project.Id"><strong>@project.Name</strong><br />@project.Description</a>
-        }
+<PageTitle>JBIDS | Job Based Instructional Design System</PageTitle>
+<HeadContent><meta name="description" content="Build instruction grounded in employer needs. JBIDS connects job announcements to training objectives, supporting evidence, and human review." /></HeadContent>
+<section class="hero">
+    <div>
+        <p class="eyebrow">From employer needs to meaningful learning</p>
+        <h1>Build instruction.<br /><span>Back it with evidence.</span></h1>
+        <p class="hero-copy">JBIDS — Job Based Instructional Design System — helps educators turn real job requirements into clear, reviewed training objectives. Keep the evidence connected as your curriculum takes shape.</p>
+        <div class="hero-actions"><a class="btn btn-primary btn-lg" href="/projects">Open projects <span aria-hidden="true">→</span></a><a class="text-link" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a></div>
+        <p class="hero-note">Open source. Educator led. Human reviewed.</p>
     </div>
-}
-<h2>Create a project</h2>
-<EditForm Model="draft" OnValidSubmit="Create" FormName="project">
-    <DataAnnotationsValidator /><ValidationSummary />
-    <label for="name" class="form-label">Project name</label>
-    <InputText id="name" class="form-control mb-3" @bind-Value="draft.Name" />
-    <label for="description" class="form-label">Description</label>
-    <InputTextArea id="description" class="form-control mb-3" @bind-Value="draft.Description" />
-    <button class="btn btn-primary" disabled="@busy">Create project</button>
-</EditForm>
-@code {
-    private List<CurriculumProject>? projects;
-    private CurriculumProject draft = new();
-    private string? error;
-    private bool busy;
-    protected override async Task OnInitializedAsync()
-    {
-        try { projects = await Store.ProjectsAsync(); }
-        catch (Exception ex) { Logger.LogError(ex, "Loading curriculum projects failed"); error = "Could not load projects. Check the database connection and apply the database migrations."; }
-    }
-    private async Task Create()
-    {
-        busy = true;
-        try { await Store.SaveProjectAsync(draft); draft = new(); projects = await Store.ProjectsAsync(); error = null; }
-        catch (System.ComponentModel.DataAnnotations.ValidationException ex) { error = ex.Message; }
-        catch (Exception ex) { Logger.LogError(ex, "Saving a curriculum project failed"); error = "Could not save the project. Please try again."; }
-        finally { busy = false; }
-    }
-}
+    <aside class="evidence-preview" aria-label="Example of an objective connected to employer evidence">
+        <div class="preview-heading"><span class="status-dot"></span> A clear line from evidence to instruction</div>
+        <div class="preview-source"><span class="preview-label">01 / JOB ANNOUNCEMENT</span><h2>Embedded software developer</h2><p>“Develop and test firmware for embedded systems.”</p></div>
+        <div class="connection-line" aria-hidden="true"><span>↓</span> Supporting evidence preserved</div>
+        <div class="preview-objective"><span class="preview-label">02 / TRAINING OBJECTIVE</span><h2>Implement and test firmware for an embedded system.</h2><div class="preview-tags"><span>Bloom’s level: Apply</span><span>Ready for review</span></div></div>
+        <p class="preview-caption">Illustrative example · Your review makes the decision.</p>
+    </aside>
+</section>
+<section class="workflow" id="how-it-works" aria-labelledby="workflow-heading">
+    <div class="section-heading"><p class="eyebrow">A practical starting point</p><h2 id="workflow-heading">Evidence in. Clear objectives out.</h2><p>Bring your subject knowledge. JBIDS keeps the sources, objectives, and decisions together.</p></div>
+    <div class="feature-grid">
+        <article class="feature"><span class="step-number">01</span><h3>Collect job evidence</h3><p>Save job announcements, their original links, and the full text. Keep the requirements available even when a listing disappears.</p></article>
+        <article class="feature"><span class="step-number">02</span><h3>Shape learning objectives</h3><p>Write measurable objectives, select a Bloom’s taxonomy level, and connect each objective to supporting excerpts from one or more announcements.</p></article>
+        <article class="feature"><span class="step-number">03</span><h3>Review with confidence</h3><p>Approve, reject, or refine each objective. When approved content or its evidence changes, it returns to Draft for a fresh review.</p></article>
+    </div>
+</section>
+<section class="direction-panel" aria-labelledby="direction-heading"><div><p class="eyebrow">Start focused. Build thoughtfully.</p><h2 id="direction-heading">A foundation for your curriculum.</h2><p>Today, collect evidence and review objectives. Future iterations will connect objectives to courses and degree plans, with LLM assistance and subject matter expert input.</p></div><a class="btn btn-outline-primary" href="/projects">Create your first project <span aria-hidden="true">→</span></a></section>

@@ -2,7 +2,7 @@
 
 ## Product vision
 
-JBIDS helps educators build curricula grounded in employer needs. It connects evidence from job announcements and, eventually, subject matter experts to training objectives, courses, and degree plans.
+JBIDS (Job Based Instructional Design System) helps educators build curricula grounded in employer needs. It connects evidence from job announcements and, eventually, subject matter experts to training objectives, courses, and degree plans.
 
 Educators remain responsible for reviewing and approving objectives. JBIDS preserves traceability so users can explain why an objective belongs in a curriculum and identify the evidence supporting it.
 
@@ -107,3 +107,10 @@ The following capabilities describe the intended direction. Their order and scop
 - SQL Server LocalDB could not start in the implementation environment. The SQL migration script was generated; applying it and testing against SQL Server remain pending.
 - Browser verification was blocked by a connection timeout. Local startup also reported restricted access to the default data-protection key directory. Acceptance with five real announcements and ten real objectives, including restarting the application, remains pending.
 - This iteration provides a shared workspace for a locally operated installation. User-specific ownership, collaboration, and access rules remain outside its scope.
+
+## Site identity and presentation
+
+- **Name:** JBIDS — Job Based Instructional Design System.
+- **Style:** Modern navy and teal, responsive layouts, accessible navigation, and visible keyboard focus.
+- **Home page:** Describe the purpose and current workflow, distinguish future capabilities, and link to the Projects workspace at `/projects`.
+- **Identity:** Original SVG logo and matching favicon connecting job evidence, learning objectives, and human review.

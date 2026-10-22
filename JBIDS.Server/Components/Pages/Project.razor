@@ -6,7 +6,7 @@
 @inject ILogger<Project> Logger
 
 <PageTitle>@(project?.Name ?? "Project") | JBIDS</PageTitle>
-<a href="/">← All projects</a>
+<a href="/projects">All projects</a>
 @if (error is not null) { <div class="alert alert-danger mt-3" role="alert">@error</div> }
 @if (notice is not null) { <div class="alert alert-success mt-3" role="status">@notice</div> }
 @if (project is null) { <p class="mt-3">@(loaded ? "Project not found or unavailable." : "Loading project…")</p> }
