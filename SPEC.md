@@ -114,3 +114,23 @@ The following capabilities describe the intended direction. Their order and scop
 - **Style:** Modern navy and teal, responsive layouts, accessible navigation, and visible keyboard focus.
 - **Home page:** Describe the purpose and current workflow, distinguish future capabilities, and link to the Projects workspace at `/projects`.
 - **Identity:** Original SVG logo and matching favicon connecting job evidence, learning objectives, and human review.
+
+## Iteration 2 — Job discovery (incremental scope)
+
+**Status:** Configuration foundation implemented; search and import pending.
+
+The intended workflow is to describe an occupation, search for related announcements using Tavily, review candidates manually, and import selected sources into a curriculum project. Jev relevance evaluation and objective generation are deferred.
+
+### Account configuration increment
+
+- Provide a signed-in Configuration page for each user's own Tavily API key.
+- Mask entry; show configured/unconfigured status without displaying a stored key.
+- Allow saving, replacing, and removing the credential. Never log its plaintext value.
+- Protect the key server-side using ASP.NET Core Data Protection with account-specific purposes, and persist it in the existing Identity user-token table.
+- Reject anonymous credential operations and isolate credentials by authenticated account. Account deletion removes its credential.
+- Saving validates formatting only. It makes no provider calls, consumes no Tavily credits, and does not claim to verify the key or enforce free-tier limits.
+- Verify credential protection, isolation, replacement, removal, validation, and anonymous rejection with synthetic-key integration checks. Live account-page acceptance and restart verification remain pending where the environment cannot run SQL Server or persist the default encryption key ring.
+
+### Next scope to implement
+
+Tavily search and extraction, duplicate handling, candidate review/import, and bounded requests with estimated credit tracking. Keep paid usage disabled at the provider account. Application counters cannot account for other applications sharing the same key.

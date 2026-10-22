@@ -46,6 +46,7 @@ namespace JBIDS
                 options.UseSqlServer(connectionString));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
             builder.Services.AddScoped<JBIDS.Server.Services.CurriculumService>();
+            builder.Services.AddScoped<JBIDS.Server.Services.TavilyConfigurationService>();
 
             builder.Services.AddIdentityCore<ApplicationUser>(options =>
                 {

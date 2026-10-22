@@ -44,6 +44,7 @@ internal static class Program
                 await db.Database.EnsureCreatedAsync();
             }
 
+            await TavilyConfigurationChecks.RunAsync(factory);
             var store = new CurriculumService(factory);
             var project = new CurriculumProject { Name = "Integration test", Description = "Synthetic employer evidence" };
             await store.SaveProjectAsync(project);

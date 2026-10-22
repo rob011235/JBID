@@ -55,3 +55,13 @@ MIT. Copyright (c) 2026 Robert Garner.
 ## Site identity
 
 JBIDS stands for **Job Based Instructional Design System**. The home page explains the current evidence-to-objective workflow; the workspace is at `/projects`. The responsive navy and teal design includes an original SVG logo (`wwwroot/images/jbids-logo.svg`), standalone mark (`wwwroot/images/jbids-mark.svg`), and SVG favicon (`wwwroot/favicon.svg`), with PNG, ICO, and Apple touch icon variants. The mark connects source lines to a learning path and review check.
+
+## Tavily configuration
+
+Open **Configuration** (`/configuration`) and sign in to save your own Tavily API key. You can save, replace, or remove it. The page reports whether a key is saved and never redisplays the stored key. Saving checks formatting only; it makes no Tavily requests and does not verify the key or spend credits. Job search and free-tier usage controls are not implemented in this configuration step.
+
+Credentials belong to the authenticated account, even though curriculum projects currently use a shared workspace. They are protected with ASP.NET Core Data Protection using a per-account purpose and stored in the existing Identity user-token table. No new database migration is required; existing Identity migrations must already be applied. Deleting an account deletes its stored credential.
+
+Use HTTPS when entering credentials. Preserve the server's Data Protection key ring across restarts and deployments, alongside database backups; losing it makes saved credentials unreadable and users must replace them. The server identity needs permission to write its key ring. Server administrators who control the application and key ring can decrypt credentials. Do not enable sensitive-data logging or request-body logging for credential operations.
+
+The integration checks use synthetic credentials to verify encryption at rest, account isolation, replacement, removal, validation, and rejection of anonymous access. They never contact Tavily.
