@@ -1,10 +1,10 @@
-# JBID — Living Specification
+# JBIDS — Living Specification
 
 ## Product vision
 
-JBID helps educators build curricula grounded in employer needs. It connects evidence from job announcements and, eventually, subject matter experts to training objectives, courses, and degree plans.
+JBIDS helps educators build curricula grounded in employer needs. It connects evidence from job announcements and, eventually, subject matter experts to training objectives, courses, and degree plans.
 
-Educators remain responsible for reviewing and approving objectives. JBID preserves traceability so users can explain why an objective belongs in a curriculum and identify the evidence supporting it.
+Educators remain responsible for reviewing and approving objectives. JBIDS preserves traceability so users can explain why an objective belongs in a curriculum and identify the evidence supporting it.
 
 The application is an open source, MIT-licensed project that other academics can clone and use.
 
@@ -101,7 +101,7 @@ The following capabilities describe the intended direction. Their order and scop
 ## Iteration 1 implementation and validation notes
 
 - Implemented with interactive Blazor Server components and EF Core using the existing SQL Server configuration. Each persistence operation uses a separate database context.
-- Added the `AddCurriculumWorkflow` migration and runnable `JBID.Checks` integration checks. See `README.md` for setup and check commands.
+- Added the `AddCurriculumWorkflow` migration and runnable `JBIDS.Checks` integration checks. See `README.md` for setup and check commands.
 - Automated checks pass against an isolated SQLite database: five synthetic announcements, ten approved objectives, many-to-many evidence, fresh-context persistence, validation, project isolation, rejection, and approval invalidation.
 - The solution builds with zero warnings and zero errors.
 - SQL Server LocalDB could not start in the implementation environment. The SQL migration script was generated; applying it and testing against SQL Server remain pending.

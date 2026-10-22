@@ -1,5 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
-  <ItemGroup><PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" /><FrameworkReference Include="Microsoft.AspNetCore.App" /><ProjectReference Include="../JBID.Server/JBID.Server.csproj" /></ItemGroup>
-</Project>
-

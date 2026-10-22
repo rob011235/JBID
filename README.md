@@ -1,6 +1,6 @@
-# JBID
+# JBIDS
 
-JBID helps educators turn job announcement evidence into reviewed training objectives. See [SPEC.md](SPEC.md) for the product vision and iterative scope.
+JBIDS helps educators turn job announcement evidence into reviewed training objectives. See [SPEC.md](SPEC.md) for the product vision and iterative scope.
 
 ## Run locally
 
@@ -9,9 +9,9 @@ Requires the .NET 10 SDK and a working SQL Server instance. The default developm
 From the repository root:
 
 ```powershell
-dotnet restore JBID.slnx
-dotnet ef database update --project JBID.Server
-dotnet run --project JBID.Server --launch-profile https
+dotnet restore JBIDS.slnx
+dotnet ef database update --project JBIDS.Server
+dotnet run --project JBIDS.Server --launch-profile https
 ```
 
 Open the address printed by the server. Apply migrations before using the project screens. Migrations are explicit and are not applied automatically at startup.
@@ -31,7 +31,7 @@ This iteration is intended for a locally operated shared workspace. Project data
 ## Automated checks
 
 ```powershell
-dotnet run --project JBID.Checks
+dotnet run --project JBIDS.Checks
 ```
 
 The default checks create and remove an isolated temporary SQLite database. They exercise five synthetic announcements, ten approvals, evidence relationships, validation, project isolation, rejection, approval invalidation, and persistence across independently constructed contexts/services. They do not change the application's configured database.
@@ -39,7 +39,7 @@ The default checks create and remove an isolated temporary SQLite database. They
 To additionally exercise the SQL Server migrations against an isolated, automatically named LocalDB database:
 
 ```powershell
-dotnet run --project JBID.Checks -- --sqlserver
+dotnet run --project JBIDS.Checks -- --sqlserver
 ```
 
 SQL Server LocalDB must be available to the process. SQLite checks create the schema from the EF model; only the SQL Server mode applies the SQL Server migrations.
