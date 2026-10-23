@@ -175,3 +175,21 @@ Managed website validation: build and automated checks pass with zero warnings/e
 **2026-10-22 presentation update:** The job website add/edit form opens in a modal dialog. Save refreshes the website table; Cancel, Close, or Escape dismisses unsaved changes. Validation stays inside the editor.
 
 **2026-10-22 presentation update:** Show announcements in a table with clickable titles and Details buttons opening a read-only modal for text, source metadata, search provenance, and linked objectives. Keep pruning and editing accessible from the table; source references on objectives also open the detail modal.
+
+## Iteration 3 - Candidate objective extraction
+
+**Scope:** Generate evidence-backed candidate objectives from saved announcements using the user's local Codex CLI signed in with ChatGPT. A future API option can use the same versioned request/response contract. The mind-map editor is a later iteration.
+
+- The hosted or local website exports an account-owned immutable JSON request with up to five pending announcements and existing project objectives. Downloading alone does not mark work complete.
+- A downloadable .NET 10 helper uses the local ChatGPT sign-in, requires ChatGPT authentication, clears API-key environment variables, forces ChatGPT login mode and offers no paid API fallback. Credentials never go to JBIDS. Announcement and objective text goes to OpenAI through Codex; subscription limits apply.
+- Process one source per Codex request with schema-constrained output, read-only sandboxing, a ten-minute timeout and no automatic provider retries. Checkpoint each successful result, including empty output. Rerunning a package resumes saved results; failed sources remain retryable.
+- Upload results to the same project and JBIDS account. Validate the immutable source revision/text, referenced existing objectives, measurable candidate content, revised Bloom levels, exact supporting excerpts, unique keys and acyclic parent relationships. Save candidates, evidence and completion atomically. Reject stale/cross-project/cross-account results.
+- Support any number of nested objective levels through a nullable parent reference. Allow human parent editing and reject self-parenting, cycles or a parent from another project. Visual node positions will be separate from parent relationships in the future mind map.
+- Reuse semantically equivalent existing objectives through their identifiers; send prior proposals to the helper to encourage consistent wording within a batch. Deduplicate normalized exact text during import. Semantic equivalence relies on the model and remains subject to human review.
+- Every new candidate starts Draft. New evidence returns an approved reused objective to Draft. Never auto-approve or overwrite reviewed objective text/hierarchy during extraction.
+- Persist completion even when no objectives are found. Repeated uploads are idempotent. Announcement text changes or explicit Allow reprocessing invalidate old results and make the source pending again, preserving prior objectives/evidence.
+- Projects remain a shared workspace as in iteration 1; extraction request ownership protects the handoff, not project-level collaboration permissions.
+
+**Setup:** Apply `AddCandidateObjectiveExtraction` and package the local helper with `scripts/Package-LocalHelper.ps1` before starting/publishing the site. Use the project's **Extract candidate objectives** link. Live ChatGPT extraction and browser acceptance require the user's normal session; automated verification uses simulated Codex and an isolated relational database.
+
+Validation: solution builds with zero warnings/errors. Isolated relational checks and a real helper process driven by a fake Codex executable pass, covering account isolation, nested hierarchy, shared evidence, empty completion, idempotency, stale results, transaction rollback, ChatGPT-only authentication, partial failure and checkpoint resume. The packaged helper download returns HTTP 200. No live ChatGPT calls were made. Apply the SQL Server migration in the normal development session; LocalDB is unavailable in the implementation environment.

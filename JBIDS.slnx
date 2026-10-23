@@ -2,4 +2,5 @@
   <Project Path="JBIDS.Client/JBIDS.Client.csproj" />
   <Project Path="JBIDS.Server/JBIDS.Server.csproj" />
   <Project Path="JBIDS.Checks/JBIDS.Checks.csproj" />
+  <Project Path="JBIDS.LocalHelper/JBIDS.LocalHelper.csproj" />
 </Solution>

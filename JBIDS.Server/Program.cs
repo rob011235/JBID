@@ -48,6 +48,7 @@ namespace JBIDS
                 options.UseSqlServer(connectionString));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
             builder.Services.AddScoped<JBIDS.Server.Services.CurriculumService>();
+            builder.Services.AddScoped<JBIDS.Server.Services.ObjectiveExtractionService>();
             builder.Services.AddScoped<JBIDS.Server.Services.JobSearchWebsiteService>();
             builder.Services.AddScoped<JBIDS.Server.Services.TavilyConfigurationService>();
             builder.Services.AddScoped<JBIDS.Server.Services.TavilyUsageService>();

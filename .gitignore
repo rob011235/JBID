@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Generated local helper download (rebuild with scripts/Package-LocalHelper.ps1)
+JBIDS.Server/wwwroot/downloads/JBIDS.LocalHelper.zip

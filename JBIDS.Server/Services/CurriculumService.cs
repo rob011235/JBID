@@ -101,7 +101,14 @@ public sealed class CurriculumService(IDbContextFactory<ApplicationDbContext> fa
                 affected.ForEach(o => o.Status = ReviewStatus.Draft);
             }
 
+            var changed = saved.Text != input.Text;
+            var completed = saved.ObjectivesExtractedOn;
+            var revision = saved.ExtractionRevision;
+            var batch = saved.LastExtractionBatchId;
             db.Entry(saved).CurrentValues.SetValues(input);
+            saved.ObjectivesExtractedOn = changed ? null : completed;
+            saved.ExtractionRevision = changed ? Guid.NewGuid() : revision;
+            saved.LastExtractionBatchId = changed ? null : batch;
         }
 
         await db.SaveChangesAsync();
@@ -119,9 +126,21 @@ public sealed class CurriculumService(IDbContextFactory<ApplicationDbContext> fa
         }
 
         await using var db = await factory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         if (!await db.Projects.AnyAsync(p => p.Id == input.ProjectId))
         {
             throw new ValidationException("Project not found.");
+        }
+
+        var parents = await db.Objectives.Where(o => o.ProjectId == input.ProjectId).ToDictionaryAsync(o => o.Id, o => o.ParentObjectiveId);
+        var seen = new HashSet<int>();
+        var parent = input.ParentObjectiveId;
+        while (parent is int parentId)
+        {
+            if (parentId == input.Id || !seen.Add(parentId) || !parents.TryGetValue(parentId, out parent))
+            {
+                throw new ValidationException("Choose a parent from this project without creating a hierarchy cycle.");
+            }
         }
 
         if (input.Id == 0)
@@ -132,16 +151,18 @@ public sealed class CurriculumService(IDbContextFactory<ApplicationDbContext> fa
         else
         {
             var saved = await db.Objectives.SingleAsync(o => o.Id == input.Id && o.ProjectId == input.ProjectId);
-            if (saved.Status == ReviewStatus.Approved && (saved.Text != input.Text || saved.Level != input.Level))
+            if (saved.Status == ReviewStatus.Approved && (saved.Text != input.Text || saved.Level != input.Level || saved.ParentObjectiveId != input.ParentObjectiveId))
             {
                 saved.Status = ReviewStatus.Draft;
             }
 
             saved.Text = input.Text;
             saved.Level = input.Level;
+            saved.ParentObjectiveId = input.ParentObjectiveId;
         }
 
         await db.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     /// <summary>Saves evidence within its project and invalidates approval when changed.</summary>

@@ -88,6 +88,15 @@ public sealed class JobAnnouncement
     [Required]
     public string Text { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the successful extraction timestamp, including empty results.</summary>
+    public DateTime? ObjectivesExtractedOn { get; set; }
+
+    /// <summary>Gets or sets the content generation used to reject stale extraction results.</summary>
+    public Guid ExtractionRevision { get; set; } = Guid.NewGuid();
+
+    /// <summary>Gets or sets the last imported extraction batch for repeat-upload protection.</summary>
+    public Guid? LastExtractionBatchId { get; set; }
+
     /// <summary>Gets or sets the query that discovered this source.</summary>
     [MaxLength(400)]
     public string? DiscoveryQuery { get; set; }
@@ -109,6 +118,9 @@ public sealed class TrainingObjective
     /// <summary>Gets or sets the saved content.</summary>
     [Required]
     public string Text { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the optional broader objective, with unrestricted nesting depth.</summary>
+    public int? ParentObjectiveId { get; set; }
 
     /// <summary>Gets or sets the Bloom cognitive level.</summary>
     [Required]

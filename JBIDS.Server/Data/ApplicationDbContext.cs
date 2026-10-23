@@ -35,6 +35,9 @@ namespace JBIDS.Server.Data
         /// <summary>Gets the site-wide job search websites.</summary>
         public DbSet<JobSearchWebsite> JobSearchWebsites => this.Set<JobSearchWebsite>();
 
+        /// <summary>Gets account-owned extraction requests.</summary>
+        public DbSet<ObjectiveExtractionBatch> ExtractionBatches => this.Set<ObjectiveExtractionBatch>();
+
         /// <inheritdoc />
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -47,6 +50,9 @@ namespace JBIDS.Server.Data
                 new JobSearchWebsite { Id = 4, Name = "ZipRecruiter", Domain = "ziprecruiter.com", IsEnabled = true },
                 new JobSearchWebsite { Id = 5, Name = "Dice", Domain = "dice.com", IsEnabled = true },
                 new JobSearchWebsite { Id = 6, Name = "USAJOBS", Domain = "usajobs.gov", IsEnabled = true });
+            builder.Entity<TrainingObjective>().HasOne<TrainingObjective>().WithMany().HasForeignKey(o => o.ParentObjectiveId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<ObjectiveExtractionBatch>().HasOne<ApplicationUser>().WithMany().HasForeignKey(b => b.OwnerId).OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<ObjectiveExtractionBatch>().HasOne<CurriculumProject>().WithMany().HasForeignKey(b => b.ProjectId).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<JobAnnouncement>().HasOne<CurriculumProject>().WithMany().HasForeignKey(a => a.ProjectId).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<TrainingObjective>().HasOne<CurriculumProject>().WithMany().HasForeignKey(o => o.ProjectId).OnDelete(DeleteBehavior.Restrict);
             builder.Entity<ObjectiveEvidence>().HasOne<TrainingObjective>().WithMany().HasForeignKey(e => e.ObjectiveId).OnDelete(DeleteBehavior.Restrict);

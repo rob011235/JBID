@@ -107,3 +107,29 @@ Every search sends the enabled domains to Tavily as restrictions. Results are al
 The **Add website** and **Edit** actions open a modal editor. Save closes the modal and refreshes the table; Cancel, the close button, or Escape dismiss it without saving. Validation errors appear inside the modal.
 
 Announcements are listed in a table showing title, employer, collection date, content availability, and linked-objective count. Click a title or **Details** to open the full announcement in a modal, including its original URL, search provenance, and related objectives. Selection, editing, and individual/bulk deletion remain available on the project page.
+
+## Extract candidate objectives with your ChatGPT account
+
+Apply the new schema and generate the local-helper download before starting the web server:
+
+```powershell
+dotnet ef database update --project JBIDS.Server
+powershell -File scripts/Package-LocalHelper.ps1
+```
+
+Open a project and click **Extract candidate objectives** under Training objectives.
+
+1. Download and unzip the helper. Install the .NET 10 runtime and [Codex CLI](https://developers.openai.com/codex/cli). Run **Sign-in.cmd** and sign in with ChatGPT.
+2. Click **Download extraction file** for up to five announcements awaiting extraction.
+3. Drag that file onto **Extract.cmd**. It writes a `.results.json` beside the downloaded input.
+4. Upload that result file on the extraction page, using the same JBIDS account and project. Review saved candidates on the project page.
+
+ChatGPT credentials remain on the user's computer. Announcement text and existing objective text are sent to OpenAI through Codex. The helper requires ChatGPT authentication, forces ChatGPT login mode and removes API-key variables from the child process; it does not fall back to paid API calls. Subscription usage limits still apply.
+
+Objectives can have nested parents at any depth, editable in the objective editor. The model can reuse existing objectives and attach evidence from additional announcements. Imports also deduplicate normalized exact wording. All newly generated candidates are Draft and require human approval. Each objective preserves an exact supporting excerpt; invented excerpts, invalid hierarchies and stale source results are rejected.
+
+Successful sources are marked **Complete**, including zero-objective results. Repeated uploads do not duplicate saved results. Failed sources stay pending. Re-running the same local input resumes checkpointed results; upload a partial result to save successful sources. Changing announcement text or selecting **Allow reprocessing** makes it pending again and invalidates outstanding results, while preserving existing objectives and evidence. Reprocessing adds evidence/candidates; it does not erase previous work.
+
+The helper uses file exchange so it works with an eventually hosted JBIDS without exposing a local service or uploading ChatGPT credentials. The shared JSON contract allows a future API provider. The drag-and-position mind-map editor is planned for a later iteration.
+
+Deployment: build the helper archive before starting/publishing JBIDS.Server so `/downloads/JBIDS.LocalHelper.zip` is included. The generated ZIP is ignored by git and reproducible from source. See `JBIDS.LocalHelper/README.md` for terminal usage and executable-location troubleshooting. Automated checks exercise a fake Codex process and an isolated database; they consume no ChatGPT or Tavily usage.

@@ -16,6 +16,14 @@ internal static class Program
     /// <returns>The asynchronous check run.</returns>
     public static async Task Main(string[] args)
     {
+        if (Environment.GetEnvironmentVariable("JBIDS_FAKE_CODEX") == "1")
+        {
+            Environment.ExitCode = await LocalHelperChecks.FakeAsync(args);
+            return;
+        }
+
+        await LocalHelperChecks.RunAsync();
+
         // Default checks use an isolated SQLite file. Pass --sqlserver to check SQL Server migrations too.
         var sqlServer = args.Contains("--sqlserver");
         var database = "JBIDS_Iteration1_Checks_" + Guid.NewGuid().ToString("N");
@@ -44,6 +52,7 @@ internal static class Program
                 await db.Database.EnsureCreatedAsync();
             }
 
+            await ObjectiveExtractionChecks.RunAsync(factory);
             await TavilyConfigurationChecks.RunAsync(factory);
             await JobWebsiteChecks.RunAsync(factory);
             await JobDiscoveryChecks.RunAsync(factory);

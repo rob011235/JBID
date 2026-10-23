@@ -134,6 +134,15 @@ namespace JBIDS.Server.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
+                    b.Property<Guid>("ExtractionRevision")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("LastExtractionBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ObjectivesExtractedOn")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("ProjectId")
                         .HasColumnType("int");
 
@@ -258,6 +267,33 @@ namespace JBIDS.Server.Migrations
                     b.ToTable("Evidence");
                 });
 
+            modelBuilder.Entity("JBIDS.Server.Data.ObjectiveExtractionBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequestJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("ExtractionBatches");
+                });
+
             modelBuilder.Entity("JBIDS.Server.Data.TrainingObjective", b =>
                 {
                     b.Property<int>("Id")
@@ -267,6 +303,9 @@ namespace JBIDS.Server.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("Level")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ParentObjectiveId")
                         .HasColumnType("int");
 
                     b.Property<int>("ProjectId")
@@ -280,6 +319,8 @@ namespace JBIDS.Server.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentObjectiveId");
 
                     b.HasIndex("ProjectId");
 
@@ -464,8 +505,28 @@ namespace JBIDS.Server.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("JBIDS.Server.Data.ObjectiveExtractionBatch", b =>
+                {
+                    b.HasOne("JBIDS.Server.Data.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JBIDS.Server.Data.CurriculumProject", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("JBIDS.Server.Data.TrainingObjective", b =>
                 {
+                    b.HasOne("JBIDS.Server.Data.TrainingObjective", null)
+                        .WithMany()
+                        .HasForeignKey("ParentObjectiveId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("JBIDS.Server.Data.CurriculumProject", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")

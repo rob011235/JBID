@@ -33,7 +33,7 @@ else
         <div class="table-responsive">
         <table class="table align-middle announcement-table">
             <caption>Saved job announcements. Open a title or select Details to view the source text.</caption>
-            <thead><tr><th scope="col">Select</th><th scope="col">Job title</th><th scope="col">Employer</th><th scope="col">Collected</th><th scope="col">Content</th><th scope="col">Objectives</th><th scope="col">Actions</th></tr></thead>
+            <thead><tr><th scope="col">Select</th><th scope="col">Job title</th><th scope="col">Employer</th><th scope="col">Collected</th><th scope="col">Content</th><th scope="col">Extraction</th><th scope="col">Objectives</th><th scope="col">Actions</th></tr></thead>
             <tbody>
             @foreach (var a in announcements)
             {
@@ -42,6 +42,7 @@ else
                     <td><button class="btn btn-link announcement-title" @onclick="() => OpenDetails(a)">@a.Title</button></td>
                     <td>@a.Employer</td><td class="text-nowrap">@a.CollectedOn.ToString("yyyy-MM-dd")</td>
                     <td>@(a.Text.StartsWith("[Search preview", StringComparison.Ordinal) ? "Preview" : "Full text")</td>
+                    <td>@(a.ObjectivesExtractedOn is null ? "Awaiting" : "Complete")</td>
                     <td>@objectives.Count(o => evidence.Any(e => e.ObjectiveId == o.Id && e.AnnouncementId == a.Id))</td>
                     <td><div class="d-flex gap-2">
                         <button class="btn btn-sm btn-outline-primary" aria-label="View details for @a.Title" @onclick="() => OpenDetails(a)">Details</button>
@@ -73,6 +74,7 @@ else
     </section>
     <section id="objectives">
     <h2>Training objectives</h2>
+    <a class="btn btn-primary mb-3 me-2" href="/projects/@ProjectId/extract-objectives">Extract candidate objectives</a>
     <button class="btn btn-outline-primary mb-3" @onclick="NewObjective">Add objective</button>
     @if (objectives.Count == 0) { <p>No objectives yet. Create an objective, attach evidence, then review it.</p> }
     @if (objective is not null)
@@ -86,6 +88,10 @@ else
             <InputSelect id="bloom" class="form-select mb-3" @bind-Value="objective.Level"><option value="">Choose a level</option>
                 @foreach (var level in Enum.GetValues<BloomLevel>()) { <option value="@level">@level</option> }
             </InputSelect>
+            <label for="parent-objective">Broader objective (optional)</label>
+            <InputSelect id="parent-objective" class="form-select mb-3" @bind-Value="objective.ParentObjectiveId"><option value="">No parent</option>
+                @foreach (var parent in objectives.Where(p => p.Id != objective.Id)) { <option value="@parent.Id">@parent.Text</option> }
+            </InputSelect>
             <button class="btn btn-primary">Save objective</button>
             <button type="button" class="btn btn-link" @onclick="() => objective = null">Cancel</button>
         </EditForm></div>
@@ -93,6 +99,7 @@ else
     @foreach (var o in objectives)
     {
         <article class="card mb-3" id="objective-@o.Id"><div class="card-body">
+        @if (o.ParentObjectiveId is int parentId) { <p class="small">Under: <a href="#objective-@parentId">@objectives.Single(p => p.Id == parentId).Text</a></p> }
         <h3 class="h5">@o.Text</h3><p><strong>@o.Status</strong> · Bloom's level: @o.Level</p>
         <div class="d-flex flex-wrap gap-2 mb-3">
             <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditObjective(o)">Edit objective</button>
@@ -246,7 +253,7 @@ else
     private void NewAnnouncement() => announcement = new() { ProjectId = ProjectId };
     private void EditAnnouncement(JobAnnouncement a) => announcement = new() { Id = a.Id, ProjectId = a.ProjectId, Title = a.Title, Employer = a.Employer, Url = a.Url, Text = a.Text, CollectedOn = a.CollectedOn, DiscoveryQuery = a.DiscoveryQuery, DiscoveryDescription = a.DiscoveryDescription };
     private void NewObjective() => objective = new() { ProjectId = ProjectId };
-    private void EditObjective(TrainingObjective o) => objective = new() { Id = o.Id, ProjectId = o.ProjectId, Text = o.Text, Level = o.Level, Status = o.Status };
+    private void EditObjective(TrainingObjective o) => objective = new() { Id = o.Id, ProjectId = o.ProjectId, Text = o.Text, Level = o.Level, Status = o.Status, ParentObjectiveId = o.ParentObjectiveId };
     private void NewEvidence(int id) => link = new() { ObjectiveId = id };
     private void EditEvidence(ObjectiveEvidence e) => link = new() { Id = e.Id, ObjectiveId = e.ObjectiveId, AnnouncementId = e.AnnouncementId, Excerpt = e.Excerpt };
     private Task SaveAnnouncement() => Run(async () => { await Store.SaveAnnouncementAsync(announcement!); announcement = null; await Load(); }, "Announcement saved. Affected approvals have been returned to Draft if source text changed.");

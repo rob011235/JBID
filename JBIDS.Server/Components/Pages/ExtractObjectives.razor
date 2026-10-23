@@ -1,0 +1,94 @@
+@page "/projects/{ProjectId:int}/extract-objectives"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@implements IAsyncDisposable
+@using System.ComponentModel.DataAnnotations
+@using System.Text.Json
+@using JBIDS.Extraction
+@using JBIDS.Server.Data
+@using JBIDS.Server.Services
+@inject ObjectiveExtractionService Extraction
+@inject CurriculumService Store
+@inject IJSRuntime JS
+@inject ILogger<ExtractObjectives> Logger
+
+<PageTitle>Extract candidate objectives | JBIDS</PageTitle>
+<a href="/projects/@ProjectId#objectives">Back to project</a>
+<h1 class="mt-3">Extract candidate objectives</h1>
+<p>Use your ChatGPT account on your computer to suggest objectives. Results are saved as drafts with supporting source excerpts.</p>
+@if (error is not null) { <p class="alert alert-danger" role="alert">@error</p> }
+@if (notice is not null) { <p class="alert alert-success" role="status">@notice <a href="/projects/@ProjectId#objectives">View objectives</a></p> }
+<fieldset disabled="@busy">
+<ol>
+    <li class="mb-3"><strong>One-time setup:</strong> <a href="/downloads/JBIDS.LocalHelper.zip" download>Download the local helper</a> and unzip it. Install the <a href="https://developers.openai.com/codex/cli" target="_blank" rel="noopener noreferrer">Codex CLI</a> and .NET 10 runtime. Run <code>Sign-in.cmd</code> to sign in with ChatGPT. Credentials stay on your computer. Subscription usage limits apply; the helper has no paid API fallback.</li>
+    <li class="mb-3"><strong>Download announcements:</strong> @pending announcements awaiting extraction. Each file includes up to five unprocessed announcements and existing objectives for reuse.
+        <div><button class="btn btn-primary mt-2" disabled="@(pending == 0)" @onclick="Export">Download extraction file</button></div>
+        <p class="small mt-2">Search previews may produce fewer objectives. Downloading does not mark announcements complete.</p>
+    </li>
+    <li class="mb-3"><strong>Run locally:</strong> Drag the downloaded JSON file onto <code>Extract.cmd</code>. The helper sends announcement text to OpenAI through your signed-in Codex account and creates a <code>.results.json</code> file beside the input. Failed announcements can be retried by running the same file again.</li>
+    <li class="mb-3"><strong>Save candidates:</strong> Choose the resulting file. Successful announcements are marked complete, including those with zero objectives. Repeated uploads do not create duplicates.
+        <div class="mt-2"><InputFile OnChange="Import" accept=".json,application/json" disabled="@busy" aria-label="Upload objective extraction results" @key="uploadKey" /></div>
+    </li>
+</ol>
+</fieldset>
+@if (sources.Count > 0)
+{
+    <h2>Extraction status</h2>
+    <div class="table-responsive"><table class="table"><thead><tr><th>Announcement</th><th>Status</th><th>Action</th></tr></thead><tbody>
+    @foreach (var source in sources)
+    {
+        <tr><td>@source.Title</td><td>@(source.ObjectivesExtractedOn is null ? "Awaiting extraction" : $"Complete ({source.ObjectivesExtractedOn:yyyy-MM-dd HH:mm} UTC)")</td><td>
+        @if (source.ObjectivesExtractedOn is not null) { <button class="btn btn-sm btn-outline-secondary" disabled="@busy" @onclick="() => Reprocess(source.Id)">Allow reprocessing</button> }
+        </td></tr>
+    }
+    </tbody></table></div>
+    <p>Reprocessing preserves existing objectives and evidence. Editing announcement text automatically makes it eligible again.</p>
+}
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+    private List<JobAnnouncement> sources = [];
+    private int pending => sources.Count(s => s.ObjectivesExtractedOn is null);
+    private string? error;
+    private string? notice;
+    private bool busy;
+    private int uploadKey;
+    private IJSObjectReference? module;
+    protected override Task OnParametersSetAsync() => Run(Load);
+    private async Task Load() => sources = await Store.AnnouncementsAsync(ProjectId);
+    private Task Export() => Run(async () =>
+    {
+        var request = await Extraction.ExportAsync(ProjectId);
+        module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/ExtractObjectives.razor.js");
+        await module.InvokeVoidAsync("download", $"jbids-extraction-{request.BatchId}.json", JsonSerializer.Serialize(request, ExtractionJson.Options));
+        notice = "Extraction file downloaded. Run it with the local helper, then upload the results here.";
+    });
+    private Task Reprocess(int id) => Run(async () => { await Extraction.ReprocessAsync(ProjectId, id); await Load(); notice = "Announcement is ready for another extraction. Download a new extraction file."; });
+    private Task Import(InputFileChangeEventArgs args) => Run(async () =>
+    {
+        try
+        {
+            await using var stream = args.File.OpenReadStream(8 * 1024 * 1024);
+            var response = await JsonSerializer.DeserializeAsync<ExtractionResponse>(stream, ExtractionJson.Options) ?? throw new ValidationException("Empty extraction result.");
+            var count = await Extraction.ImportAsync(ProjectId, response);
+            await Load();
+            notice = $"Saved results for {count} announcements. Candidates are ready for review.";
+        }
+        finally { uploadKey++; }
+    });
+    private async Task Run(Func<Task> action)
+    {
+        if (busy) return;
+        busy = true; error = null; notice = null;
+        try { await action(); }
+        catch (ValidationException ex) { error = ex.Message; }
+        catch (JsonException) { error = "Invalid results file. Choose the .results.json file produced by the local helper."; }
+        catch (IOException) { error = "Could not read the file. Results must be smaller than 8 MB."; }
+        catch (Exception ex) { Logger.LogError(ex, "Objective extraction operation failed"); error = "Could not complete extraction. Check the database connection and retry."; }
+        finally { busy = false; }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null) { try { await module.DisposeAsync(); } catch (JSDisconnectedException) { } }
+    }
+}
